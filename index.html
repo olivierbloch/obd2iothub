@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>OBD II to IoT Hub</title>
+  </head>
+  <body>
+    <h2>My Car data:</h2>
+    <!-- All of the Node.js APIs are available in this renderer process. -->
+    <h3>Engine RPM</h3>
+    <a id="rpm"></a> rpm
+    <h3>Vehicule Speed</h3>
+    <a id="speed"></a> km/h
+    <h3>Engine Temperature</h3>
+    <a id="temp"></a> C
+    <h3>Ambient Temperature</h3>
+    <a id="aat"></a> C
+
+    <h3>System info</h3>
+    We are using Node.js <script>document.write(process.versions.node)</script>,
+    Chromium <script>document.write(process.versions.chrome)</script>,
+    and Electron <script>document.write(process.versions.electron)</script>.
+  </body>
+
+  <script>
+    // You can also require other files to run in this process
+    require('./obd2iothub.js')
+  </script>
+</html>
