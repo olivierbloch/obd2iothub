@@ -21,7 +21,7 @@ var dataReceivedMarker = {};
 
 // String containing Hostname, Device Id & Device Key in the following formats:
 //  "HostName=<iothub_host_name>;DeviceId=<device_id>;SharedAccessKey=<device_key>"
-var connectionString = 'HostName=ConnectedCarHack.azure-devices.net;DeviceId=olivierpi;SharedAccessKey=L6h0ooIt2mjxwOFl01Jkh+iWqtsST/V4FW8IO9hWmqg=';
+var connectionString = "HostName=<iothub_host_name>;DeviceId=<device_id>;SharedAccessKey=<device_key>";
 
 // fromConnectionString must specify a transport constructor, coming from any transport package.
 var ioTHubClient = IoTHubClient.fromConnectionString(connectionString, Protocol);
