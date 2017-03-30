@@ -8,11 +8,16 @@
 var Protocol = require('azure-iot-device-mqtt').Mqtt;
 var IoTHubClient = require('azure-iot-device').Client;
 var Message = require('azure-iot-device').Message;
+var gps = require('wifi-location');
 
 // Bluetooth OBD resources
 var OBDReader = require('bluetooth-obd');
 var btOBDReader = new OBDReader();
-var carData = { vss:"",
+var carData = { vin:"",
+                location:"0,0", 
+                longitude:0, 
+                latitude:0, 
+                vss:"",
                 rpm:"",
                 temp:"",
                 aat:""
@@ -20,26 +25,26 @@ var carData = { vss:"",
 var dataReceivedMarker = {};
 
 // String containing Hostname, Device Id & Device Key in the following formats:
-//  "HostName=<iothub_host_name>;DeviceId=<device_id>;SharedAccessKey=<device_key>"
 var connectionString = "HostName=<iothub_host_name>;DeviceId=<device_id>;SharedAccessKey=<device_key>";
+ 
 
 // fromConnectionString must specify a transport constructor, coming from any transport package.
 var ioTHubClient = IoTHubClient.fromConnectionString(connectionString, Protocol);
 
 var ioTHubConnectionCallback = function (err) {
   if (err) {
-    console.error('Could not connect: ' + err.message);
+    printLog('ERROR: Could not connect: ' + err.message);
   } else {
-    console.log('IoT Hub Client connected');
+    printLog('IoT Hub Client connected');
 
     ioTHubClient.on('message', function (msg) {
-      console.log('Id: ' + msg.messageId + ' Body: ' + msg.data);
+      printLog('Id: ' + msg.messageId + ' Body: ' + msg.data);
       // When using MQTT the following line is a no-op.
       ioTHubClient.complete(msg, printResultFor('completed'));
     });
 
     ioTHubClient.on('error', function (err) {
-      console.error(err.message);
+      printLog("ERROR: "+ err.message);
     });
 
     // Connect OBDReader using first device with 'obd' in the name 
@@ -47,19 +52,28 @@ var ioTHubConnectionCallback = function (err) {
 
     // Send car data up to Azure IoT Hub every 3 seconds
     setInterval( function(){
+      // Get Current Location
+      getCurrentLocation();
+      // Create message to send to IoT Hub
       var data = JSON.stringify(carData);
       var message = new Message(data);
-      console.log('Sending message: ' + message.getData());
-
+      message.properties.add('TelemetryName', 'telemetry-carhealth');
+      printLog('Sending message: ' + message.getData());
+      // Send message
       ioTHubClient.sendEvent(message, printResultFor('send'));
     }, 3000);
-
   }
 };
 
 btOBDReader.on('connected', function () {
-  //this.requestValueByName("vss"); //vss = vehicle speed sensor 
- 
+  //this.requestValueByName("vss"); //vss = vehicle speed sensor 
+  printLog("OBD II Adpater connected");
+
+  // Get VIN
+//  carData["vin"] = this.requestValueByName("vin");
+  carData["vin"] = "VINDEADBEEFVIN";
+
+  // Add pollers
   for (var pid in carData)
   {
       this.addPoller(pid);
@@ -74,12 +88,19 @@ btOBDReader.on('connected', function () {
 });
 
 btOBDReader.on('dataReceived', function (data) {
-    console.log(data);
+//    printLog("Received data from OBD Adpater: " + data);
     dataReceivedMarker = data;
     // Update buffer
     carData[data.name] = data.value;
+
     // Update UI
-    document.getElementById(data.name).innerHTML = data.value;
+    for (var dataField in carData)
+    {
+      var element = document.getElementById(dataField);
+      if (element) {
+        element.innerHTML = carData[dataField];
+      }
+    }
 });
 
 // Start IoT Hub Client
@@ -91,4 +112,31 @@ function printResultFor(op) {
     if (err) console.log(op + ' error: ' + err.toString());
     if (res) console.log(op + ' status: ' + res.constructor.name);
   };
+}
+
+function printLog(text) {
+  console.log(text);
+  var textToLog = text + "<br/>";
+  document.getElementById("logs").innerHTML+=textToLog;
+}
+
+function getCurrentLocation()
+{
+  printLog("Getting current location");
+  gps.getTowers(function(err, towers){
+    if (err) {
+      printLog("Error getting location:" + err);
+    } else {
+      gps.getLocation(towers, function (err, loc) {
+        if (err){
+          printLog("Error getting location:" + err);
+        } else {
+          carData.location = loc.longitude + ", " +  loc.latitude;
+          carData.longitude = loc.longitude;
+          carData.latitude =  loc.latitude;
+        }
+      })
+
+    }
+  });  
 }
